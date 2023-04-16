@@ -7,14 +7,76 @@
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
 
+### profiles
+class Profiles(models.Model):
+    user = models.OneToOneField('Users', models.CASCADE)
+    name = models.CharField(max_length=255)
+    birthday = models.DateField(blank=True, null=True)
+    gender = models.IntegerField()
+    degree = models.IntegerField()
+    department = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(blank=True, null=True)
+    updated_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'profiles'
+
+### users
+class Users(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    email = models.CharField(unique=True, max_length=255)
+    email_verified_at = models.DateTimeField(blank=True, null=True)
+    password = models.CharField(max_length=255)
+    remember_token = models.CharField(max_length=100, blank=True, null=True)
+    role = models.PositiveIntegerField()
+    created_at = models.DateTimeField(blank=True, null=True)
+    updated_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'users'
+
+### department_module
+class DepartmentModule(models.Model):
+    department = models.ForeignKey('Departments', models.DO_NOTHING)
+    module = models.ForeignKey('Modules', models.DO_NOTHING)
+    study_year = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'department_module'
+        unique_together = (('department', 'module'),)
+
+### departments
+class Departments(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    name = models.CharField(unique=True, max_length=255)
+    created_at = models.DateTimeField(blank=True, null=True)
+    updated_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'departments'
+
+
+###modules
+class Modules(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    code = models.CharField(unique=True, max_length=255)
+    name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(blank=True, null=True)
+    updated_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'modules'
+
+
+
+
 
 class AuthGroup(models.Model):
     name = models.CharField(unique=True, max_length=150)
 
     class Meta:
-        managed = False
+        id = models.AutoField(primary_key=True)
         db_table = 'auth_group'
-
 
 class AuthGroupPermissions(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -22,7 +84,6 @@ class AuthGroupPermissions(models.Model):
     permission = models.ForeignKey('AuthPermission', models.DO_NOTHING)
 
     class Meta:
-        managed = False
         db_table = 'auth_group_permissions'
         unique_together = (('group', 'permission'),)
 
@@ -33,7 +94,6 @@ class AuthPermission(models.Model):
     codename = models.CharField(max_length=100)
 
     class Meta:
-        managed = False
         db_table = 'auth_permission'
         unique_together = (('content_type', 'codename'),)
 
@@ -51,7 +111,6 @@ class AuthUser(models.Model):
     date_joined = models.DateTimeField()
 
     class Meta:
-        managed = False
         db_table = 'auth_user'
 
 
@@ -61,7 +120,6 @@ class AuthUserGroups(models.Model):
     group = models.ForeignKey(AuthGroup, models.DO_NOTHING)
 
     class Meta:
-        managed = False
         db_table = 'auth_user_groups'
         unique_together = (('user', 'group'),)
 
@@ -72,31 +130,10 @@ class AuthUserUserPermissions(models.Model):
     permission = models.ForeignKey(AuthPermission, models.DO_NOTHING)
 
     class Meta:
-        managed = False
         db_table = 'auth_user_user_permissions'
         unique_together = (('user', 'permission'),)
 
 
-class DepartmentModule(models.Model):
-    department = models.ForeignKey('Departments', models.DO_NOTHING)
-    module = models.ForeignKey('Modules', models.DO_NOTHING)
-    study_year = models.IntegerField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'department_module'
-        unique_together = (('department', 'module'),)
-
-
-class Departments(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    name = models.CharField(unique=True, max_length=255)
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'departments'
 
 
 class DjangoAdminLog(models.Model):
@@ -109,7 +146,6 @@ class DjangoAdminLog(models.Model):
     user = models.ForeignKey(AuthUser, models.DO_NOTHING)
 
     class Meta:
-        managed = False
         db_table = 'django_admin_log'
 
 
@@ -118,7 +154,6 @@ class DjangoContentType(models.Model):
     model = models.CharField(max_length=100)
 
     class Meta:
-        managed = False
         db_table = 'django_content_type'
         unique_together = (('app_label', 'model'),)
 
@@ -130,7 +165,6 @@ class DjangoMigrations(models.Model):
     applied = models.DateTimeField()
 
     class Meta:
-        managed = False
         db_table = 'django_migrations'
 
 
@@ -140,7 +174,6 @@ class DjangoSession(models.Model):
     expire_date = models.DateTimeField()
 
     class Meta:
-        managed = False
         db_table = 'django_session'
 
 
@@ -154,10 +187,9 @@ class FailedJobs(models.Model):
     failed_at = models.DateTimeField()
 
     class Meta:
-        managed = False
         db_table = 'failed_jobs'
 
-
+###feedback
 class Feedback(models.Model):
     id = models.BigAutoField(primary_key=True)
     module = models.ForeignKey('Modules', models.DO_NOTHING)
@@ -172,7 +204,6 @@ class Feedback(models.Model):
     updated_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
         db_table = 'feedback'
 
 
@@ -181,20 +212,8 @@ class Migrations(models.Model):
     batch = models.IntegerField()
 
     class Meta:
-        managed = False
         db_table = 'migrations'
 
-
-class Modules(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    code = models.CharField(unique=True, max_length=255)
-    name = models.CharField(max_length=255)
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'modules'
 
 
 class PasswordResets(models.Model):
@@ -203,7 +222,6 @@ class PasswordResets(models.Model):
     created_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
         db_table = 'password_resets'
 
 
@@ -219,35 +237,5 @@ class PersonalAccessTokens(models.Model):
     updated_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
         db_table = 'personal_access_tokens'
 
-
-class Profiles(models.Model):
-    user = models.OneToOneField('Users', models.DO_NOTHING)
-    name = models.CharField(max_length=255)
-    birthday = models.DateField(blank=True, null=True)
-    gender = models.IntegerField()
-    degree = models.IntegerField()
-    department = models.CharField(max_length=255, blank=True, null=True)
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'profiles'
-
-
-class Users(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    email = models.CharField(unique=True, max_length=255)
-    email_verified_at = models.DateTimeField(blank=True, null=True)
-    password = models.CharField(max_length=255)
-    remember_token = models.CharField(max_length=100, blank=True, null=True)
-    role = models.PositiveIntegerField()
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'users'
