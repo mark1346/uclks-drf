@@ -27,17 +27,20 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+AUTH_USER_MODEL = 'users.Users'
+
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
+    # 'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'users',
     'uclks_api',
 ]
 
@@ -78,7 +81,7 @@ WSGI_APPLICATION = 'uclks_drf.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'uclks',
+        'NAME': 'new_uclks',
         'USER': 'root',
         'PASSWORD': '6gkrsus7qks',
         'HOST': 'localhost',
