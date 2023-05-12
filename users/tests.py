@@ -22,11 +22,11 @@ class UserRegistrationTestCase(APITestCase):
             'password': 'testpassword'
         }
         
-        # self.invalid_user_data = {
-        #     'name': 'testuser',
-        #     'email': 'invalidemail',
-        #     'password': 'testpassword'
-        # }
+        self.invalid_user_data = {
+            'name': 'testuser',
+            'email': 'invalidemail',
+            'password': 'testpassword'
+        }
 
     def test_user_registration(self):
         response = self.client.post(self.register_url, self.user_data, format='json')
@@ -35,44 +35,46 @@ class UserRegistrationTestCase(APITestCase):
         self.assertEqual(Profiles.objects.count(), 1)
         self.assertEqual(get_user_model().objects.get().email, self.user_data['email'])
 
-    # def test_invalid_user_registration(self):
-    #     response = self.client.post(self.register_url, self.invalid_user_data, format='json')
-    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    def test_invalid_user_registration(self):
+        response = self.client.post(self.register_url, self.invalid_user_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-# class UserRegisterSerializerTest(TestCase):
-#     def setUp(self):
-#         self.valid_data = {
-#             'name': 'JohnDoe',
-#             'email': 'johndoe@example.com',
-#             'password': '6gkrsus7qks',
-#         }
+class UserRegisterSerializerTest(TestCase):
+    def setUp(self):
+        self.valid_data = {
+            'email': 'johndoe@example.com',
+            'password': '6gkrsus7qks',
+            'profile': {
+                'name': 'John Doe',
+            }
+        }
     
-#     def test_create_user_and_profile(self):
-#         print(self.valid_data)
-#         serializer = UserRegisterSerializer(data=self.valid_data)
-#         serializer.is_valid(raise_exception=True)
-#         print("this is error:" + str(serializer.errors))
+    def test_create_user_and_profile(self):
+        print(self.valid_data)
+        serializer = UserRegisterSerializer(data=self.valid_data)
+        serializer.is_valid(raise_exception=True)
+        print("this is error:" + str(serializer.errors))
         
-#         user = serializer.save()
+        user = serializer.save()
         
-#         # Check that a user and profile were created with the correct data
-#         self.assertEqual(user.email, self.valid_data['email'])
-#         self.assertTrue(user.check_password(self.valid_data['password']))
-#         profile = Profiles.objects.get(user=user)
-#         self.assertEqual(profile.name, self.valid_data['name'])
-#         self.assertEqual(profile.gender, 0)
-#         self.assertEqual(profile.degree, 0)
+        # Check that a user and profile were created with the correct data
+        self.assertEqual(user.email, self.valid_data['email'])
+        self.assertTrue(user.check_password(self.valid_data['password']))
+        profile = Profiles.objects.get(user=user)
+        self.assertEqual(profile.name, self.valid_data['profile']['name'])
+        self.assertEqual(profile.gender, 0)
+        self.assertEqual(profile.degree, 0)
     
-#     # def test_password_validation(self):
-#     #     self.valid_data['password'] = 'asd'
-#     #     serializer = UserRegisterSerializer(data=self.valid_data)
-#     #     serializer.is_valid()
-#     #     print("this is error:" + str(serializer.errors))
-#     #     self.assertEqual(serializer.errors['password'][0], 
-#     #                      serializers.Field.default_error_messages['min_length'].format(8))
+    def test_password_validation(self):
+        self.valid_data['password'] = 'asd'
+        serializer = UserRegisterSerializer(data=self.valid_data)
+        serializer.is_valid()
+        print("this is error:" + str(serializer.errors))
+        # self.assertEqual(serializer.errors['password'][0], 
+        #                  serializers.Field.default_error_messages['min_length'].format(8))
     
-#     def test_email_uniqueness(self):
-#         User.objects.create_user(email=self.valid_data['email'], password=self.valid_data['password'])
-#         serializer = UserRegisterSerializer(data=self.valid_data)
-#         self.assertFalse(serializer.is_valid())
-#         self.assertEqual(serializer.errors['email'][0], 'This field must be unique.')
+    def test_email_uniqueness(self):
+        User.objects.create_user(email=self.valid_data['email'], password=self.valid_data['password'])
+        serializer = UserRegisterSerializer(data=self.valid_data)
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(serializer.errors['email'][0], 'This field must be unique.')
