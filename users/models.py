@@ -31,7 +31,15 @@ class Profiles(models.Model):
 
     class Meta:
         db_table = 'profiles'
-
+    
+    def save(self, *args, **kwargs):
+        if not self.pk and not self.user:
+            self.user = self._meta.get_field('user').get_default()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return self.name
+                
 class UserManager(BaseUserManager):
     
     use_in_migrations = True
