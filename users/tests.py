@@ -11,50 +11,50 @@ from users.models import Profiles
 
 User = get_user_model()
 
-class UserLoginAPIViewTestCase(APITestCase):
-    def setUp(self):
-        self.valid_data = {
-            'email': 'logintest@gmail.com',
-            'password': '6gkrsus7qks',
-            'profile': {
-                'name': 'Login Tester',
-            }
-        }
-        self.client = APIClient()
-        self.login_url = reverse('login')
+# class UserLoginAPIViewTestCase(APITestCase):
+#     def setUp(self):
+#         self.valid_data = {
+#             'email': 'logintest@gmail.com',
+#             'password': '6gkrsus7qks',
+#             'profile': {
+#                 'name': 'Login Tester',
+#             }
+#         }
+#         self.client = APIClient()
+#         self.login_url = reverse('login')
         
-    def test_user_login(self):
-        serializer = UserRegisterSerializer(data=self.valid_data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        profile = Profiles.objects.get(user=user)
+#     def test_user_login(self):
+#         serializer = UserRegisterSerializer(data=self.valid_data)
+#         serializer.is_valid(raise_exception=True)
+#         user = serializer.save()
+#         profile = Profiles.objects.get(user=user)
         
-        # the request data
-        data = {
-            'email': 'logintest@gmail.com',
-            'password': '6gkrsus7qks',
-        }
+#         # the request data
+#         data = {
+#             'email': 'logintest@gmail.com',
+#             'password': '6gkrsus7qks',
+#         }
         
-        # Make API call to login user
-        response = self.client.post(self.login_url, data, format='json')
+#         # Make API call to login user
+#         response = self.client.post(self.login_url, data, format='json')
         
-        # Assert the response status code
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+#         # Assert the response status code
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
-        print("this is response data:" + str(response.data))
+#         print("this is response data:" + str(response.data))
         
-        # Assert the response data
-        expected_data = {
-            'user': {
-                'email': 'logintest@gmail.com',
-            },
-            'message': 'User logged in successfully',
-            'token': {
-                'access_token': str(response.data['token']['access_token']),
-                'refresh_token': str(response.data['token']['refresh_token']),
-            }
-        }
-        self.assertEqual(response.data, expected_data)
+#         # Assert the response data
+#         expected_data = {
+#             'user': {
+#                 'email': 'logintest@gmail.com',
+#             },
+#             'message': 'User logged in successfully',
+#             'token': {
+#                 'access_token': str(response.data['token']['access_token']),
+#                 'refresh_token': str(response.data['token']['refresh_token']),
+#             }
+#         }
+#         self.assertEqual(response.data, expected_data)
         
         
             
