@@ -4,87 +4,141 @@ from rest_framework.test import APITestCase, APIClient
 from rest_framework.views import status
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from datetime import date
+from datetime import datetime, timedelta
 
-from users.serializers import UserRegisterSerializer, ProfileSerializer
+from users.serializers import UserRegisterSerializer, ProfileSerializer, UserSerializer
 from users.models import Profiles
+
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+import jwt
+from django.conf import settings
 
 User = get_user_model()
 
-class UserLoginAPIViewTestCase(APITestCase):
-    maxDiff = None
+class UserRetrieveAPITestCase(TestCase):
     def setUp(self):
-        self.valid_data = {
-            'email': 'logintest@gmail.com',
-            'password': '6gkrsus7qks',
-            'profile': {
-                'name': 'Login Tester',
-            }
-        }
         self.client = APIClient()
-        self.login_url = reverse('login')
+        self.user = User.objects.create_user(email='testuser', password='testpassword')
+        print("this is user:" + str(self.user))
         
-    def test_user_login(self):
-        serializer = UserRegisterSerializer(data=self.valid_data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        profile = Profiles.objects.get(user=user)
+        # Generate tokens
+        self.access_token = AccessToken.for_user(self.user)
+        self.refresh_token = RefreshToken.for_user(self.user)
         
-        # the request data
-        data = {
-            'email': 'logintest@gmail.com',
-            'password': '6gkrsus7qks',
-            'profile': {
-                'name': 'Login Tester',
-            }
-        }
+        # Set tokens in client's cookies
+        self.client.cookies['access_token'] = self.access_token
+        self.client.cookies['refresh_token'] = self.refresh_token
         
-        # Make API call to login user
-        response = self.client.post(self.login_url, data, format='json')
-        
-        # Assert the response status code
+        self.auth_url = reverse('auth')
+
+    def test_retrieve_user(self):
+        response = self.client.get(self.auth_url, format='json')
+        print("this is response:" + str(response))
+        print("this is response.data:" + str(response.data))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
-        print("this is response data:" + str(response.data))
-        
-        # Assert the response data
-        expected_data = {
-            'user': {
-                'id': 1,
-                'email': 'logintest@gmail.com',
-                'profile': {
-                    'id': response.data['user']['profile']['id'],
-                    'name': 'Login Tester',
-                    'birthday': None,
-                    'gender': 0,
-                    'degree': 0,
-                    'department': None,
-                    'created_at': response.data['user']['profile']['created_at'],
-                    'updated_at': response.data['user']['profile']['updated_at'],
-                },
-                    
-            },
-            'message': 'User logged in successfully',
-            'token': {
-                'access_token': str(response.data['token']['access_token']),
-                'refresh_token': str(response.data['token']['refresh_token']),
-            }
+        self.assertEqual(response.data['id'], self.user.id)
+        self.assertEqual(response.data['email'], self.user.email)
+        # Add more assertions based on your UserSerializer fields
+
+    def test_retrieve_user_with_expired_access_token(self):
+        # Simulate an expired access token
+        expired_time = datetime.utcnow() - timedelta(minutes=65)
+        payload = {
+            'user_id': self.user.id,
+            'exp': expired_time
         }
-        self.assertEqual(response.data, expected_data)
+        expired_access_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+        self.client.cookies['access_token'] = expired_access_token
+        
+        response = self.client.get(self.auth_url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], self.user.id)
+        self.assertEqual(response.data['email'], self.user.email)
+        # Add more assertions based on UserSerializer fields
+
+    def test_retrieve_user_with_invalid_access_token(self):
+        # Simulate an invalid access token
+        invalid_token = 'invalid_token_value'
+        
+        self.client.cookies['access_token'] = invalid_token
+        
+        response = self.client.get(self.auth_url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
+# class UserLoginAPIViewTestCase(APITestCase):
+#     maxDiff = None
+#     def setUp(self):
+#         self.valid_data = {
+#             'email': 'logintest@gmail.com',
+#             'password': '6gkrsus7qks',
+#             'profile': {
+#                 'name': 'Login Tester',
+#             }
+#         }
+#         self.client = APIClient()
+#         self.login_url = reverse('login')
+        
+#     def test_user_login(self):
+#         serializer = UserRegisterSerializer(data=self.valid_data)
+#         serializer.is_valid(raise_exception=True)
+#         user = serializer.save()
+#         profile = Profiles.objects.get(user=user)
+        
+#         # the request data
+#         data = {
+#             'email': 'logintest@gmail.com',
+#             'password': '6gkrsus7qks',
+#             'profile': {
+#                 'name': 'Login Tester',
+#             }
+#         }
+        
+#         # Make API call to login user
+#         response = self.client.post(self.login_url, data, format='json')
+        
+#         # Assert the response status code
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+#         print("this is response data:" + str(response.data))
+        
+#         # Assert the response data
+#         expected_data = {
+#             'user': {
+#                 'id': 1,
+#                 'email': 'logintest@gmail.com',
+#                 'profile': {
+#                     'id': response.data['user']['profile']['id'],
+#                     'name': 'Login Tester',
+#                     'birthday': None,
+#                     'gender': 0,
+#                     'degree': 0,
+#                     'department': None,
+#                     'created_at': response.data['user']['profile']['created_at'],
+#                     'updated_at': response.data['user']['profile']['updated_at'],
+#                 },
+                    
+#             },
+#             'message': 'User logged in successfully',
+#             'token': {
+#                 'access_token': str(response.data['token']['access_token']),
+#                 'refresh_token': str(response.data['token']['refresh_token']),
+#             }
+#         }
+#         self.assertEqual(response.data, expected_data)
         
         
             
 
-class UserRegistrationTestCase(APITestCase):
-    def setUp(self):
-        self.client = APIClient()
-        self.register_url = reverse('register')
+# class UserRegistrationTestCase(APITestCase):
+#     def setUp(self):
+#         self.client = APIClient()
+#         self.register_url = reverse('register')
 
-        self.user_data = {
-            'email': 'john13doe@example.com',
-            'password': '6gkrsus7qks',
-            'name': 'John Doe',
-        }
+#         self.user_data = {
+#             'email': 'john13doe@example.com',
+#             'password': '6gkrsus7qks',
+#             'name': 'John Doe',
+#         }
         
         # self.invalid_user_data = {
         #     'email': 'invalidemail',

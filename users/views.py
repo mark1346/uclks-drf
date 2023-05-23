@@ -1,11 +1,13 @@
-from .serializers import UserRegisterSerializer, ProfileSerializer
+from .serializers import UserRegisterSerializer, ProfileSerializer, UserSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from rest_framework import status
 from django.contrib.auth import authenticate, get_user_model
-from rest_framework.generics import CreateAPIView
 from .models import Profiles
+import jwt
+from django.conf import settings
+from django.shortcuts import get_object_or_404
 
 User = get_user_model()
 
@@ -94,3 +96,40 @@ class UserLoginAPIView(APIView):
                 {"detail": "Invalid email or password"},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+
+class UserRetrieveAPIView(APIView):
+    # permission_classes=[isAuthenticated]
+    serializer_class = UserSerializer
+    
+    #유저 정보 확인
+    def get(self, request):
+        try:
+            # Access Token decoding and User Identification
+            access = request.COOKIES.get('access_token')
+            print("this is access token from cookie: " + str(access))
+            payload = jwt.decode(access, settings.SECRET_KEY, algorithms=['HS256'])
+            user_id = payload.get('user_id')
+            user = get_object_or_404(User, pk=user_id)
+            serializer = UserSerializer(instance=user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        except jwt.exceptions.ExpiredSignatureError:
+            # 토큰 만료시 토큰 갱신
+            data = {'refresh': request.COOKIES.get('refresh_token')}
+            token_serializer = TokenRefreshSerializer(data=data)
+            token_serializer.is_valid(raise_exception=True)
+            access_token = token_serializer.validated_data.get('access')
+            refresh_token = token_serializer.validated_data.get('refresh')
+            payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=['HS256'])
+            user_id = payload.get('user_id')
+            user = get_object_or_404(User, pk=user_id)
+            user_serializer = UserSerializer(instance=user)
+            res = Response(user_serializer.data, status=status.HTTP_200_OK)
+            res.set_cookie("access_token", access_token, httponly=True)
+            res.set_cookie("refresh_token", refresh_token, httponly=True)
+            return res
+        
+        except jwt.exceptions.InvalidTokenError:
+            # Invalid Token
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+    
