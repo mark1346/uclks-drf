@@ -3,11 +3,16 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from rest_framework import status
+from rest_framework.generics import UpdateAPIView
 from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.hashers import check_password
 from .models import Profiles
 import jwt
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.permissions import IsAuthenticated
+from .permissions import IsOwnerOrReadOnly
 
 User = get_user_model()
 
@@ -98,7 +103,7 @@ class UserLoginAPIView(APIView):
             )
 
 class UserRetrieveAPIView(APIView):
-    # permission_classes=[isAuthenticated]
+    # permission_classes=[IsAuthenticated]
     serializer_class = UserSerializer
     
     #유저 정보 확인
@@ -111,7 +116,13 @@ class UserRetrieveAPIView(APIView):
             user_id = payload.get('user_id')
             user = get_object_or_404(User, pk=user_id)
             serializer = UserSerializer(instance=user)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            profile = Profiles.objects.get(user=user)
+            profile_data = ProfileSerializer(profile).data
+            
+            user_data = serializer.data
+            user_data['profile'] = profile_data
+            
+            return Response(user_data, status=status.HTTP_200_OK)
         
         except jwt.exceptions.ExpiredSignatureError:
             # 토큰 만료시 토큰 갱신
@@ -124,7 +135,14 @@ class UserRetrieveAPIView(APIView):
             user_id = payload.get('user_id')
             user = get_object_or_404(User, pk=user_id)
             user_serializer = UserSerializer(instance=user)
-            res = Response(user_serializer.data, status=status.HTTP_200_OK)
+            
+            profile = Profiles.objects.get(user=user)
+            profile_data = ProfileSerializer(profile).data
+            
+            user_data = user_serializer.data
+            user_data['profile'] = profile_data
+            
+            res = Response(user_data, status=status.HTTP_200_OK)
             res.set_cookie("access_token", access_token, httponly=True)
             res.set_cookie("refresh_token", refresh_token, httponly=True)
             return res
@@ -133,3 +151,88 @@ class UserRetrieveAPIView(APIView):
             # Invalid Token
             return Response(status=status.HTTP_401_UNAUTHORIZED)
     
+    
+class UserUpdateAPIView(UpdateAPIView):
+    permission_classes=[IsAuthenticated, IsOwnerOrReadOnly]
+    serializer_class = UserSerializer
+    authentication_classes = [JWTAuthentication]
+    
+    def get_object(self):
+        return self.request.user
+    
+class UserDeleteAPIView(APIView):
+    permission_classes=[IsAuthenticated, IsOwnerOrReadOnly]
+    def delete(self, request):
+        try:
+            user = request.user
+            user.delete()
+            # print("this is user from request: " + str(user))
+            return Response({"message": "User deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class PasswordChangeAPIView(APIView):
+    permission_classes = [IsOwnerOrReadOnly, IsAuthenticated]
+    def post(self, request):
+        user = request.user
+        current_password = request.data.get('current-password')
+        new_password = request.data.get('new-password')
+        confirmation_password = request.data.get('confirmation')
+
+        if not current_password or not new_password or not confirmation_password:
+            return Response({'error': 'Please provide all the required fields.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if new_password != confirmation_password:
+            return Response({'error': 'New password and confirmation do not match.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not check_password(current_password, user.password):
+            return Response({'error': 'Current password is incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user.set_password(new_password)
+        user.save()
+        
+        return Response({'message': 'Password changed successfully.'}, status=status.HTTP_200_OK)
+    
+class EmailChangeAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    def post(self, request):
+        try:
+            email = request.data.get('email')
+            
+            # Get the current user
+            user = request.user
+            
+            # Update the email
+            user.email = email
+            user.save()
+            
+            return Response({"message": "Email changed successfully"}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class ProfileUpdateAPIView(UpdateAPIView):
+    permission_classes=[IsAuthenticated, IsOwnerOrReadOnly]
+    
+    def post(self, request):
+        try:
+            user = request.user
+            profile = Profiles.objects.get(user=user)
+            
+            # parse the request data
+            data = {
+                'name': request.data.get('name'),
+                'birthday': request.data.get('birthday'),
+                'gender': request.data.get('gender'),
+                'degree': request.data.get('degree'),
+                'department': request.data.get('department'),
+            }
+            profile_serializer = ProfileSerializer(instance=profile, data=data)
+            if profile_serializer.is_valid():
+                profile_serializer.save()
+                return Response({"message": "Profile updated successfully"}, status=status.HTTP_200_OK)
+            
+            return Response(profile_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -15,55 +15,181 @@ from django.conf import settings
 
 User = get_user_model()
 
-class UserRetrieveAPITestCase(TestCase):
+class ProfileUpdateAPITestCase(APITestCase):
     def setUp(self):
+        # 유저 만들기
         self.client = APIClient()
-        self.user = User.objects.create_user(email='testuser', password='testpassword')
-        print("this is user:" + str(self.user))
-        
-        # Generate tokens
-        self.access_token = AccessToken.for_user(self.user)
-        self.refresh_token = RefreshToken.for_user(self.user)
-        
-        # Set tokens in client's cookies
-        self.client.cookies['access_token'] = self.access_token
-        self.client.cookies['refresh_token'] = self.refresh_token
-        
-        self.auth_url = reverse('auth')
-
-    def test_retrieve_user(self):
-        response = self.client.get(self.auth_url, format='json')
-        print("this is response:" + str(response))
-        print("this is response.data:" + str(response.data))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['id'], self.user.id)
-        self.assertEqual(response.data['email'], self.user.email)
-        # Add more assertions based on your UserSerializer fields
-
-    def test_retrieve_user_with_expired_access_token(self):
-        # Simulate an expired access token
-        expired_time = datetime.utcnow() - timedelta(minutes=65)
-        payload = {
-            'user_id': self.user.id,
-            'exp': expired_time
+        self.register_url = reverse('register')
+        self.user_data = {
+            'email': 'mark@example.com',
+            'password': '6gkrsus7qks',
+            'name': 'Mark Han',
         }
-        expired_access_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
-        self.client.cookies['access_token'] = expired_access_token
+        self.register_response = self.client.post(self.register_url, self.user_data, format='json')
+        self.user_data = self.register_response.data['user']
+        # self.profile = self.user_data['profile']
+        self.update_url = reverse('profile-update')
         
-        response = self.client.get(self.auth_url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['id'], self.user.id)
-        self.assertEqual(response.data['email'], self.user.email)
-        # Add more assertions based on UserSerializer fields
+        self.user = User.objects.get(email=self.user_data['email'])
+        
+    def test_update_profile_authenticated(self):
+        token = AccessToken.for_user(self.user)
+        headers = {'Authorization': f'Bearer {token}'}
 
-    def test_retrieve_user_with_invalid_access_token(self):
-        # Simulate an invalid access token
-        invalid_token = 'invalid_token_value'
+        self.client.force_authenticate(user=self.user)
+        print("this is response data: " + str(self.register_response.data))
+        updating_data = {
+            'name': 'Sunghyun Han',
+            'birthday': '1999-08-25',
+            'gender': 1,
+            'degree': 1,
+            'department': 'Computer Science',
+        }
         
-        self.client.cookies['access_token'] = invalid_token
+        response = self.client.post(self.update_url, updating_data, format='json', headers=headers)
         
-        response = self.client.get(self.auth_url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Profile updated successfully')
+        
+        self.profile = Profiles.objects.get(user=self.user)
+        print("this is profile data: " + str(self.profile))
+        
+        self.assertEqual(self.profile.name, updating_data['name'])
+        self.assertEqual(str(self.profile.birthday), updating_data['birthday'])
+        self.assertEqual(self.profile.gender, updating_data['gender'])
+        self.assertEqual(self.profile.degree, updating_data['degree'])
+        self.assertEqual(self.profile.department, updating_data['department'])
+
+
+# class EmailChangeAPITestCase(APITestCase):
+#     def setUp(self):
+#         self.user = User.objects.create_user(email='emailchange@example.com', password='testpassword')
+#         self.client.force_authenticate(user=self.user)
+#         self.url = reverse('email-change')
+    
+#     def test_change_email(self):
+#         new_email = 'newemail@example.com'
+#         data = {'email': new_email}
+        
+#         response = self.client.post(self.url, data)
+        
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#         self.assertEqual(response.data['message'], 'Email changed successfully')
+#         self.user.refresh_from_db()
+#         self.assertEqual(self.user.email, new_email)
+    
+    
+# class PasswordChangeAPITestCase(APITestCase):
+#     def setUp(self):
+#         self.user = User.objects.create_user(email='pwchangetest@example.com', password='oldpassword')
+#         self.client.force_authenticate(user=self.user)
+#         self.url = reverse('password-change')
+    
+#     def test_password_change(self):
+#         data = {
+#             'current-password': 'oldpassword',
+#             'new-password': 'newpassword',
+#             'confirmation': 'newpassword',
+#         }
+#         response = self.client.post(self.url, data)
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#         self.assertEqual(response.data['message'], 'Password changed successfully.')
+        
+#         # Check that the user's password has changed
+#         self.user.refresh_from_db()
+#         self.assertTrue(self.user.check_password('newpassword'))
+            
+# class UserDeleteAPITestCase(APITestCase):
+#     def setUp(self):
+#         self.user = User.objects.create_user(email='deletetest@gmail.com', password='testpassword')
+#         # self.access_token = AccessToken.for_user(self.user)
+#         # self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + str(self.access_token)) # access token을 header에 넣어줌
+#         self.delete_url = reverse('user-delete')
+#         print("this is self.user:" + str(self.user))
+    
+#     def test_delete_user(self):
+#         # Send a DELETE request to delete the user
+#         self.client.force_authenticate(user=self.user)
+#         response = self.client.delete(self.delete_url)
+#         print("this is response:" + str(response))
+#         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+#         self.assertFalse(User.objects.filter(pk=self.user.pk).exists())
+        
+#     def test_delete_user_unauthenticated(self):
+#         response = self.client.delete(self.delete_url)
+#         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+#         self.assertTrue(User.objects.filter(pk=self.user.pk).exists())
+            
+# class UserUpdateAPITestCase(APITestCase):
+#     def setUp(self):
+#         self.user = User.objects.create_user(email='testuser@example.com', password='testpassword')
+#         self.client.force_authenticate(user=self.user)
+#         self.update_url = reverse('user-update')
+
+#     def test_update_user(self):
+#         # Send a PUT request to update the user
+#         data = {
+#             'email': 'updatedemail@example.com',
+#             'password': 'updatedpassword',
+#             'profile': {
+#                 'name': 'Updated Name'
+#             }
+#         }
+#         response = self.client.put(self.update_url, data, format='json')
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#         # Add assertions to check the updated user data in the response
+#         # For example: self.assertEqual(response.data['email'], 'updatedemail@example.com')
+
+# class UserRetrieveAPITestCase(TestCase):
+#     def setUp(self):
+#         self.client = APIClient()
+#         self.user = User.objects.create_user(email='testuser', password='testpassword')
+#         self.profile = Profiles.objects.create(user=self.user, name='testname')
+#         print("this is user:" + str(self.user))
+        
+#         # Generate tokens
+#         self.access_token = AccessToken.for_user(self.user)
+#         self.refresh_token = RefreshToken.for_user(self.user)
+        
+#         # Set tokens in client's cookies
+#         self.client.cookies['access_token'] = self.access_token
+#         self.client.cookies['refresh_token'] = self.refresh_token
+        
+#         self.auth_url = reverse('auth')
+
+#     def test_retrieve_user(self):
+#         response = self.client.get(self.auth_url, format='json')
+#         print("this is response:" + str(response))
+#         print("this is response.data:" + str(response.data))
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#         self.assertEqual(response.data['id'], self.user.id)
+#         self.assertEqual(response.data['email'], self.user.email)
+
+
+#     def test_retrieve_user_with_expired_access_token(self):
+#         # Simulate an expired access token
+#         expired_time = datetime.utcnow() - timedelta(minutes=65)
+#         payload = {
+#             'user_id': self.user.id,
+#             'exp': expired_time
+#         }
+#         expired_access_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+#         self.client.cookies['access_token'] = expired_access_token
+        
+#         response = self.client.get(self.auth_url, format='json')
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#         self.assertEqual(response.data['id'], self.user.id)
+#         self.assertEqual(response.data['email'], self.user.email)
+
+
+#     def test_retrieve_user_with_invalid_access_token(self):
+#         # Simulate an invalid access token
+#         invalid_token = 'invalid_token_value'
+        
+#         self.client.cookies['access_token'] = invalid_token
+        
+#         response = self.client.get(self.auth_url, format='json')
+#         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         
 # class UserLoginAPIViewTestCase(APITestCase):
 #     maxDiff = None
