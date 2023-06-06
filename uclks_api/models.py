@@ -6,6 +6,7 @@
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
+from django.utils import timezone
 
 ### department_module
 class DepartmentModule(models.Model):
@@ -21,8 +22,8 @@ class DepartmentModule(models.Model):
 class Departments(models.Model):
     id = models.BigAutoField(primary_key=True)
     name = models.CharField(unique=True, max_length=255)
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         db_table = 'departments'
@@ -33,8 +34,8 @@ class Modules(models.Model):
     id = models.BigAutoField(primary_key=True)
     code = models.CharField(unique=True, max_length=255)
     name = models.CharField(max_length=255)
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         db_table = 'modules'
@@ -43,16 +44,59 @@ class Modules(models.Model):
 ###feedback
 class Feedback(models.Model):
     id = models.BigAutoField(primary_key=True)
-    module = models.ForeignKey('Modules', models.DO_NOTHING)
-    is_compulsory = models.IntegerField()
-    module_difficulty = models.IntegerField()
-    amount_of_assignments = models.IntegerField()
-    exam_difficulty = models.IntegerField()
+    module = models.ForeignKey('Modules', related_name='feedbacks', on_delete=models.DO_NOTHING)
+    
+    COMPULSORY_CHOICES = (
+        (0, 'Not Compulsory'),
+        (1, 'Compulsory')
+    )
+    is_compulsory = models.IntegerField(choices=COMPULSORY_CHOICES, default=1)
+    
+    DIFFICULTY_CHOICES = (
+        (1, 'Very Easy'),
+        (2, 'Easy'),
+        (3, 'Normal'),
+        (4, 'Difficult'),
+        (5, 'Very Difficult'),
+    )
+    module_difficulty = models.IntegerField(choices=DIFFICULTY_CHOICES, default=3)
+    
+    ASSIGNMENT_AMOUNT_CHOICES = (
+        (1, 'Very Few'),
+        (2, 'Few'),
+        (3, 'Normal'),
+        (4, 'Many'),
+        (5, 'Very Many')
+    )
+    amount_of_assignments = models.IntegerField(choices=ASSIGNMENT_AMOUNT_CHOICES, default=3)
+    
+    EXAM_DIFFICULTY_CHOICES = (
+        (1, 'Very Easy'),
+        (2, 'Easy'),
+        (3, 'Normal'),
+        (4, 'Difficult'),
+        (5, 'Very Difficult'),
+    )
+    exam_difficulty = models.IntegerField(choices=EXAM_DIFFICULTY_CHOICES, default=3)
+    
     tips = models.TextField(blank=True, null=True)
-    evaluation = models.IntegerField()
+    
+    EVALUATION_CHOICES = (
+        (1, 'Very Very Shxt'),
+        (2, 'Very Shxt'),
+        (3, 'Shit'),
+        (4, 'Below Average'),
+        (5, 'Average'),
+        (6, 'Good'),
+        (7, 'Very Good'),
+        (8, 'Excellent'),
+        (9, 'Fxcking Amazing'),
+        (10, 'Free First'),
+    )
+    evaluation = models.IntegerField(choices=EVALUATION_CHOICES, default=5)
     comments = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         db_table = 'feedback'

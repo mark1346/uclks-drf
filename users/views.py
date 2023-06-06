@@ -11,12 +11,14 @@ import jwt
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .permissions import IsOwnerOrReadOnly
 
 User = get_user_model()
 
 class UserRegisterAPIView(APIView):
+    permission_classes = [AllowAny]
+    
     def post(self, request):
         data = {
             'email': request.data.get('email'),
@@ -57,7 +59,7 @@ class UserRegisterAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserLoginAPIView(APIView):
-    
+    permission_classes = [AllowAny]
     #로그인
     def post(self, request):
         email = request.data.get('email')

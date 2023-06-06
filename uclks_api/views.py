@@ -1,81 +1,74 @@
-from django.contrib.auth import authenticate, get_user_model
 from django.shortcuts import get_object_or_404
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.cache import never_cache
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Department, Module
-from .serializers import (DepartmentSerializer, ModuleSerializer, UserSerializer,
-                          UserChangePasswordSerializer, UserChangeEmailSerializer,
-                          UserProfileSerializer, UserUpdateProfileSerializer)
+from .models import Departments, Modules, DepartmentModule, Feedback
+from .serializers import (DepartmentSerializer, ModuleSerializer, DepartmentModuleSerializer, FeedbackSerializer)
+from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.views import APIView
+from django.db.models import Avg
 
 
-
-
-
-class DepartmentListView(generics.ListAPIView):
-    queryset = Department.objects.all()
+class DepartmentListAPIView(ListAPIView):
     serializer_class = DepartmentSerializer
-    permission_classes = (permissions.AllowAny,)
-
-
-class DepartmentSearchView(generics.ListAPIView):
-    serializer_class = DepartmentSerializer
-    permission_classes = (permissions.AllowAny,)
-
+    
     def get_queryset(self):
-        query = self.request.query_params.get("query")
-        if query:
-            return Department.objects.filter(name__icontains=query)
-        return Department.objects.none()
+        keyword = self.request.GET.get('keyword', None)
+        descending = self.request.GET.get('descending', None) # 이렇게 받으면 다 string으로 받아짐
+        queryset = Departments.objects.all()
+        
+        if keyword is not None:
+            # Filter departments based on the keyword
+            queryset = queryset.filter(name__icontains=keyword)
+        
+        if descending == 'True':
+            # Sort departments in descending order
+            queryset = queryset.order_by('-id')
 
+        return queryset
 
-class DepartmentDetailView(generics.RetrieveAPIView):
-    queryset = Department.objects.all()
+class DepartmentDetailAPIView(RetrieveAPIView):
+    queryset = Departments.objects.all()
     serializer_class = DepartmentSerializer
-    permission_classes = (permissions.AllowAny,)
-
-
-class ModuleDetailView(generics.RetrieveAPIView):
-    queryset = Module.objects.all()
-    serializer_class = ModuleSerializer
-    permission_classes = (permissions.AllowAny,)
-
-
-class ModuleAverageView(views.APIView):
-    permission_classes = (permissions.AllowAny,)
-
-    def get(self, request, id):
-        module = get_object_or_404(Module, id=id)
-        average = module.get_average_score()
-        return Response({"average": average}, status=status.HTTP_200_OK)
-
-
-class UserInfoView(views.APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = (JWTAuthentication,)
-
-    def get(self, request):
-        user = request.user
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
-
-
-class UserProfileView(views.APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = (JWTAuthentication,)
-
-    def get(self, request):
-        user = request.user
-        serializer = UserProfileSerializer(user)
-        return Response(serializer.data)
-
-
-class LogoutView(views.APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = (JWTAuthentication,)
-
-    def post(self, request):
+    
+    
+class ModuleDetailAPIView(APIView):
+    def get(self, request, id, format=None):
+        recent = request.query_params.get('recent', None)
+        try:
+            module = Modules.objects.get(id=id)
+            if recent == 'true':
+                feedbacks = module.feedbacks.order_by('-created_at')
+            else:
+                feedbacks = module.feedbacks.order_by('created_at')
+        except Modules.DoesNotExist:
+            return Response({'error': 'Module Not Found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        module_serializer = ModuleSerializer(module)
+        feedback_serializer = FeedbackSerializer(feedbacks, many=True)
+        
+        
+        return Response({
+            'module': module_serializer.data, 
+            'feedbacks': feedback_serializer.data,
+        }, status=status.HTTP_200_OK)
+        
+class ModuleAverageAPIView(APIView):
+    def get(self, request, id, format=None):
+        try:
+            module = Modules.objects.get(id=id)
+            feedbacks = module.feedbacks.all()
+        except Modules.DoesNotExist:
+            return Response({'error': 'Module not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Calculate average ratings from feedbacks
+        evaluation_avg = feedbacks.aggregate(Avg('evaluation'))['evaluation__avg']
+        module_difficulty_avg = feedbacks.aggregate(Avg('module_difficulty'))['module_difficulty__avg']
+        amount_of_assignments_avg = feedbacks.aggregate(Avg('amount_of_assignments'))['amount_of_assignments__avg']
+        exam_difficulty_avg = feedbacks.aggregate(Avg('exam_difficulty'))['exam_difficulty__avg']
+        
+        return Response({
+            'evaluation': evaluation_avg,
+            'module_difficulty': module_difficulty_avg,
+            'amount_of_assignments': amount_of_assignments_avg,
+            'exam_difficulty': exam_difficulty_avg
+        }, status=status.HTTP_200_OK)

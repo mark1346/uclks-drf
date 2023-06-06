@@ -1,6 +1,11 @@
 from rest_framework import serializers
 from .models import DepartmentModule, Departments, Modules, Feedback
 
+class DepartmentModuleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DepartmentModule
+        fields = '__all__'
+
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Departments
@@ -14,12 +19,4 @@ class ModuleSerializer(serializers.ModelSerializer):
 class FeedbackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feedback
-        fields = '__all__'
-
-class DepartmentModuleSerializer(serializers.ModelSerializer):
-    department = DepartmentSerializer()
-    module = ModuleSerializer()
-
-    class Meta:
-        model = DepartmentModule
         fields = '__all__'
