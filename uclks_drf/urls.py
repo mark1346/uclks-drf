@@ -15,10 +15,24 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework import permissions
+from drf_yasg import views, openapi
 
+schema_view = views.get_schema_view(
+    openapi.Info(
+        title="UCLKS API",
+        default_version='v1',
+        description="API documentation for UCLKS Project",
+        contact=openapi.Contact(email="zczlsh0@ucl.ac.uk"),
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/users/', include('users.urls')),
-    path('api/', include('uclks_api.urls'))
+    path('api/', include('uclks_api.urls')),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'), # Swagger UI
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'), # ReDoc UI
 ]
