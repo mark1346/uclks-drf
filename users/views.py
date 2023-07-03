@@ -164,6 +164,7 @@ class UserUpdateAPIView(UpdateAPIView):
     
 class UserDeleteAPIView(APIView):
     permission_classes=[IsAuthenticated, IsOwnerOrReadOnly]
+    
     def delete(self, request):
         try:
             user = request.user
