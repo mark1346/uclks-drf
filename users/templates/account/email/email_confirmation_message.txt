@@ -1,0 +1,9 @@
+Hello from UCLKS!
+
+You're receiving this email because user with email '{{ user }}' has provided your email address to register an account on UCLKS Website.
+
+To confirm that this email address is correct, please click the following link:
+
+{{ activate_url }}
+
+Thank you for using UCLKS!

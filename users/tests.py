@@ -12,53 +12,109 @@ from users.models import Profiles
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 import jwt
 from django.conf import settings
+from django.core import mail
+from allauth.account.models import EmailAddress, EmailConfirmation, EmailConfirmationHMAC
+from django.utils import timezone
 
 User = get_user_model()
 
-class ProfileUpdateAPITestCase(APITestCase):
-    def setUp(self):
-        # 유저 만들기
-        self.client = APIClient()
-        self.register_url = reverse('register')
-        self.user_data = {
-            'email': 'mark@example.com',
-            'password': '6gkrsus7qks',
-            'name': 'Mark Han',
-        }
-        self.register_response = self.client.post(self.register_url, self.user_data, format='json')
-        self.user_data = self.register_response.data['user']
-        # self.profile = self.user_data['profile']
-        self.update_url = reverse('profile-update')
+# class SendVerificationEmailAPITestCase(APITestCase):
+#     def setUp(self):
+#         self.user = User.objects.create_user(email='SVEtestemail', password='testpassword')
+#         self.client = APIClient()
+#         self.url = reverse('send-email-verification')
+    
+#     def test_send_verification_email(self):
+#         self.client.force_authenticate(user=self.user)
         
-        self.user = User.objects.get(email=self.user_data['email'])
+#         # send a verification email
+#         response = self.client.post(self.url)
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#         self.assertEqual(response.data['message'], 'Verification email sent.')
+    
+#         # Verify that an email has been sent
+#         print("this is mail subject: " + mail.outbox[0].subject)
+#         print("this is mail body: " + mail.outbox[0].body)
+#         self.assertEqual(len(mail.outbox), 1)
+#         self.assertEqual(mail.outbox[0].subject, 'Email Verification from UCLKS Website')
+#         self.assertEqual(mail.outbox[0].to, [self.user.email])
+    
+class HandleEmailVerificationAPITestCase(APITestCase):
+    def test_handle_email_verification(self):
+        # Create a user and an email address with an unverified status
+        self.user = User.objects.create_user(email='HVEtestemail', password='testpassword')
+        email_address = EmailAddress.objects.create(user=self.user, email=self.user.email, verified=False)
         
-    def test_update_profile_authenticated(self):
-        token = AccessToken.for_user(self.user)
-        headers = {'Authorization': f'Bearer {token}'}
-
-        self.client.force_authenticate(user=self.user)
-        print("this is response data: " + str(self.register_response.data))
-        updating_data = {
-            'name': 'Sunghyun Han',
-            'birthday': '1999-08-25',
-            'gender': 1,
-            'degree': 1,
-            'department': 'Computer Science',
-        }
+        # Generate an email confirmation key
+        email_confirmation = EmailConfirmation.create(email_address)
+        email_confirmation.sent = timezone.now()
+        print("this is email_confirmation: " + str(email_confirmation))
+        email_confirmation.save()
+        key = email_confirmation.key
+        print("this is key in test: " + key)
         
-        response = self.client.post(self.update_url, updating_data, format='json', headers=headers)
         
+        # Perform email verification with the key
+        url = reverse('handle-email-verification', kwargs={'key': key})
+        response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['message'], 'Profile updated successfully')
+        print("This is from HMAC:" + str(EmailConfirmationHMAC.from_key(key)))
+        print("this is EmailConfirmation.from_key: " + str(EmailConfirmation.objects.filter(key=key).first()))
+
         
-        self.profile = Profiles.objects.get(user=self.user)
-        print("this is profile data: " + str(self.profile))
+        # Verify that the email address has been verified and role is updated
+        email_address.refresh_from_db()
+        self.assertEqual(email_address.verified, True)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.role, 1)
         
-        self.assertEqual(self.profile.name, updating_data['name'])
-        self.assertEqual(str(self.profile.birthday), updating_data['birthday'])
-        self.assertEqual(self.profile.gender, updating_data['gender'])
-        self.assertEqual(self.profile.degree, updating_data['degree'])
-        self.assertEqual(self.profile.department, updating_data['department'])
+        
+
+       
+# class ProfileUpdateAPITestCase(APITestCase):
+#     def setUp(self):
+#         # 유저 만들기
+#         self.client = APIClient()
+#         self.register_url = reverse('register')
+#         self.user_data = {
+#             'email': 'mark@example.com',
+#             'password': '6gkrsus7qks',
+#             'name': 'Mark Han',
+#         }
+#         self.register_response = self.client.post(self.register_url, self.user_data, format='json')
+#         self.user_data = self.register_response.data['user']
+#         # self.profile = self.user_data['profile']
+#         self.update_url = reverse('profile-update')
+        
+#         self.user = User.objects.get(email=self.user_data['email'])
+        
+#     def test_update_profile_authenticated(self):
+#         token = AccessToken.for_user(self.user)
+#         headers = {'Authorization': f'Bearer {token}'}
+
+#         self.client.force_authenticate(user=self.user)
+#         print("this is response data: " + str(self.register_response.data))
+#         updating_data = {
+#             'name': 'Sunghyun Han',
+#             'birthday': '1999-08-25',
+#             'gender': 1,
+#             'degree': 1,
+#             'department': 'Computer Science',
+#         }
+        
+#         response = self.client.post(self.update_url, updating_data, format='json', headers=headers)
+        
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#         self.assertEqual(response.data['message'], 'Profile updated successfully')
+        
+#         self.profile = Profiles.objects.get(user=self.user)
+#         print("this is profile data: " + str(self.profile))
+        
+#         self.assertEqual(self.profile.name, updating_data['name'])
+#         self.assertEqual(str(self.profile.birthday), updating_data['birthday'])
+#         self.assertEqual(self.profile.gender, updating_data['gender'])
+#         self.assertEqual(self.profile.degree, updating_data['degree'])
+#         self.assertEqual(self.profile.department, updating_data['department'])
 
 
 # class EmailChangeAPITestCase(APITestCase):

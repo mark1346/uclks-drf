@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -48,9 +50,12 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'users',
     'uclks_api',
+    
+    # all auth
     'allauth',
     'allauth.account',
-    'allauth.socialaccount',
+    # 'allauth.socialaccount', # 소셜 로그인 필요하면 추가
+    
     'drf_yasg', # swagger : API 문서화
 ]
 SITE_ID = 1
@@ -66,6 +71,7 @@ SWAGGER_SETTINGS = {
     },
 }
 
+# allauth 사용을 위한 세팅
 AUTHENTICATION_BACKENDS = [
     # Needed to login by username in Django admin, regardless of `allauth`
     'django.contrib.auth.backends.ModelBackend',
@@ -193,3 +199,11 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# All auth 'user_display' 설정. username 대신 email 사용
+def custom_user_display(user):
+    return user.email
+
+ACCOUNT_USER_DISPLAY = custom_user_display
+
+ACCOUNT_EMAIL_SUBJECT_PREFIX = '' # 이메일 제목에 들어갈 prefix

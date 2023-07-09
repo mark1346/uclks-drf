@@ -8,8 +8,11 @@ from .views import (
     PasswordChangeAPIView, 
     EmailChangeAPIView,
     ProfileUpdateAPIView,
+    SendVerificationEmailAPIView,
+    HandleEmailVerificationAPIView,
 )
 from rest_framework_simplejwt.views import TokenRefreshView
+from allauth.account.views import ConfirmEmailView
 
 urlpatterns = [
     path('register/', UserRegisterAPIView.as_view(), name='register'), # 회원가입
@@ -21,4 +24,7 @@ urlpatterns = [
     path('password/edit', PasswordChangeAPIView.as_view(), name='password-change'), # 비밀번호 변경
     path('email/edit', EmailChangeAPIView.as_view(), name='email-change'), # 이메일 변경
     path('profile/edit', ProfileUpdateAPIView.as_view(), name='profile-update'), # 프로필 변경
+    path('send-email-verification', SendVerificationEmailAPIView().as_view(), name='send-email-verification'), # 이메일 인증 메일 보내기
+    path('handle-email-verification/<str:key>', HandleEmailVerificationAPIView.as_view(), name='handle-email-verification'), # 이메일 인증 처리
+    path('confirm-email/<str:key>', ConfirmEmailView.as_view(), name='account_confirm_email'), # all auth 이메일 인증
 ]

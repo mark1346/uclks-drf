@@ -13,6 +13,10 @@ from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .permissions import IsOwnerOrReadOnly
+from allauth.account.models import EmailConfirmation, EmailConfirmationHMAC, EmailAddress
+from django.utils import timezone
+from allauth.account.utils import send_email_confirmation
+
 
 User = get_user_model()
 
@@ -239,3 +243,42 @@ class ProfileUpdateAPIView(UpdateAPIView):
         
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class SendVerificationEmailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        user = request.user  # Assuming the user is authenticated
+        email = user.email
+        
+        # Create and save the EmailAddress instance if not already created
+        email_address, _ = EmailAddress.objects.get_or_create(user=user, email=email)
+        
+        # Send the verification email
+        email_confirmation = EmailConfirmation.create(email_address)
+        send_email_confirmation(request, email_confirmation.email_address.user)
+        email_confirmation.sent = timezone.now()
+        email_confirmation.save()
+        print("this is email_confirmation: " + str(email_confirmation))
+        print("this is email_confirmation.key: " + str(email_confirmation.key))
+        
+        # Return the success message
+        return Response({'message': 'Verification email sent.'})
+
+class HandleEmailVerificationAPIView(APIView):
+    def post(self, request, key):
+        print("this is key in view: " + str(key))
+        email_confirmation = EmailConfirmation.objects.filter(key=key).first()
+        print("this is email_confirmation in view: " + str(email_confirmation))
+        
+        if email_confirmation is not None and email_confirmation.sent < timezone.now():
+            # Email confirmation exists and is valid
+            print("email confirmed")
+            email_confirmation.confirm(request)
+            print("email_confirmation.email_address.verified: " + str(email_confirmation.email_address.verified))
+            user = email_confirmation.email_address.user
+            user.role = 1
+            user.save()
+            return Response({'message': 'Email verified successfully.'})
+        else:
+            return Response({'error': 'Invalid verification key.'}, status=status.HTTP_400_BAD_REQUEST)
