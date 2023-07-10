@@ -83,8 +83,20 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'
 
 LOGIN_REDIRECT_URL = '/'
 
- # 이메일 인증을 콘솔에서 확인할 수 있음. console을 smtp로 바꾸면 실제 이메일로 전송됨.
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+ # console로 하면 이메일 인증을 콘솔에서 확인할 수 있음. smtp로 바꾸면 실제 이메일로 전송됨.
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND_DEBUG = True
+# smtp 세팅 (Gmail)
+EMAIL_HOST = 'smtp.gmail.com' # smtp 서버 주소
+EMAIL_PORT = 587 # gmail smtp 포트번호
+EMAIL_HOST_USER = '' # gmail 계정
+EMAIL_HOST_PASSWORD = '' # 앱 비밀번호
+EMAIL_USE_TLS = True # TLS 보안 설정 (이메일 보낼 때 암호화여부)
+EMAIL_USE_SSL = False # SSL 보안 설정 (TLS 보안 설정과 동시에 사용하면 안됨) SSL용 포트는 465
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER # 기본 이메일 발신자
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 7 # 이메일 유효기간 설정 (일 기준)
+ACCOUNT_EMAIL_SUBJECT_PREFIX = '' # 이메일 제목에 들어갈 prefix
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -206,4 +218,3 @@ def custom_user_display(user):
 
 ACCOUNT_USER_DISPLAY = custom_user_display
 
-ACCOUNT_EMAIL_SUBJECT_PREFIX = '' # 이메일 제목에 들어갈 prefix

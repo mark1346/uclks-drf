@@ -275,7 +275,7 @@ class HandleEmailVerificationAPIView(APIView):
             # Email confirmation exists and is valid
             print("email confirmed")
             email_confirmation.confirm(request)
-            print("email_confirmation.email_address.verified: " + str(email_confirmation.email_address.verified))
+            print("email_confirmation.email_address.user: " + str(email_confirmation.email_address.verified))
             user = email_confirmation.email_address.user
             user.role = 1
             user.save()

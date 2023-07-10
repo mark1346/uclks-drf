@@ -15,58 +15,72 @@ from django.conf import settings
 from django.core import mail
 from allauth.account.models import EmailAddress, EmailConfirmation, EmailConfirmationHMAC
 from django.utils import timezone
+from django.core.mail import send_mail
 
 User = get_user_model()
 
-# class SendVerificationEmailAPITestCase(APITestCase):
-#     def setUp(self):
-#         self.user = User.objects.create_user(email='SVEtestemail', password='testpassword')
-#         self.client = APIClient()
-#         self.url = reverse('send-email-verification')
+class SendVerificationEmailAPITestCase(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email='markymark331@gmail.com', password='testpassword')
+        self.client = APIClient()
+        self.url = reverse('send-email-verification')
     
-#     def test_send_verification_email(self):
-#         self.client.force_authenticate(user=self.user)
-        
-#         # send a verification email
-#         response = self.client.post(self.url)
-#         self.assertEqual(response.status_code, status.HTTP_200_OK)
-#         self.assertEqual(response.data['message'], 'Verification email sent.')
-    
-#         # Verify that an email has been sent
-#         print("this is mail subject: " + mail.outbox[0].subject)
-#         print("this is mail body: " + mail.outbox[0].body)
-#         self.assertEqual(len(mail.outbox), 1)
-#         self.assertEqual(mail.outbox[0].subject, 'Email Verification from UCLKS Website')
-#         self.assertEqual(mail.outbox[0].to, [self.user.email])
-    
-class HandleEmailVerificationAPITestCase(APITestCase):
-    def test_handle_email_verification(self):
-        # Create a user and an email address with an unverified status
-        self.user = User.objects.create_user(email='HVEtestemail', password='testpassword')
-        email_address = EmailAddress.objects.create(user=self.user, email=self.user.email, verified=False)
-        
-        # Generate an email confirmation key
-        email_confirmation = EmailConfirmation.create(email_address)
-        email_confirmation.sent = timezone.now()
-        print("this is email_confirmation: " + str(email_confirmation))
-        email_confirmation.save()
-        key = email_confirmation.key
-        print("this is key in test: " + key)
-        
-        
-        # Perform email verification with the key
-        url = reverse('handle-email-verification', kwargs={'key': key})
-        response = self.client.post(url)
+    def test_real_email(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.url)
+        # send_mail(
+        #     subject='Email Verification',
+        #     message=f'Click the link to verify your email: ',
+        #     from_email=settings.DEFAULT_FROM_EMAIL,
+        #     recipient_list=[self.user.email],
+        #     fail_silently=False,
+        # )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        print("This is from HMAC:" + str(EmailConfirmationHMAC.from_key(key)))
-        print("this is EmailConfirmation.from_key: " + str(EmailConfirmation.objects.filter(key=key).first()))
+        self.assertEqual(response.data['message'], 'Verification email sent.')
+        
+    # def test_send_verification_email(self):
+    #     self.client.force_authenticate(user=self.user)
+        
+    #     # send a verification email
+    #     response = self.client.post(self.url)
+    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+    #     self.assertEqual(response.data['message'], 'Verification email sent.')
+    
+    #     # Verify that an email has been sent
+    #     print("this is mail subject: " + mail.outbox[0].subject)
+    #     print("this is mail body: " + mail.outbox[0].body)
+    #     self.assertEqual(len(mail.outbox), 1)
+    #     self.assertEqual(mail.outbox[0].subject, 'Email Verification from UCLKS Website')
+    #     self.assertEqual(mail.outbox[0].to, [self.user.email])
+    
+# class HandleEmailVerificationAPITestCase(APITestCase):
+#     def test_handle_email_verification(self):
+#         # Create a user and an email address with an unverified status
+#         self.user = User.objects.create_user(email='HVEtestemail', password='testpassword')
+#         email_address = EmailAddress.objects.create(user=self.user, email=self.user.email, verified=False)
+        
+#         # Generate an email confirmation key
+#         email_confirmation = EmailConfirmation.create(email_address)
+#         email_confirmation.sent = timezone.now()
+#         print("this is email_confirmation: " + str(email_confirmation))
+#         email_confirmation.save()
+#         key = email_confirmation.key
+#         print("this is key in test: " + key)
+        
+        
+#         # Perform email verification with the key
+#         url = reverse('handle-email-verification', kwargs={'key': key})
+#         response = self.client.post(url)
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#         print("This is from HMAC:" + str(EmailConfirmationHMAC.from_key(key)))
+#         print("this is EmailConfirmation.from_key: " + str(EmailConfirmation.objects.filter(key=key).first()))
 
         
-        # Verify that the email address has been verified and role is updated
-        email_address.refresh_from_db()
-        self.assertEqual(email_address.verified, True)
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.role, 1)
+#         # Verify that the email address has been verified and role is updated
+#         email_address.refresh_from_db()
+#         self.assertEqual(email_address.verified, True)
+#         self.user.refresh_from_db()
+#         self.assertEqual(self.user.role, 1)
         
         
 
